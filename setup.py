@@ -7,7 +7,7 @@ setup(
     long_description=open("README.md").read(),
     author="Glas42",
     license="GPL-3.0",
-    packages=["SimpleWindow.py"],
+    packages=["SimpleWindow/SimpleWindow.py"],
     python_requires=">=3.9",
     install_requires=[
         "pyopengl",
