@@ -23,6 +23,7 @@ jobs:
         pip install wheel
         pip install setuptools
         pip install .
+        pip install twine
     - name: Build and publish
       env:
         TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
