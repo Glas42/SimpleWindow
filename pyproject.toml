@@ -4,6 +4,6 @@ version = "0.1"
 description = "A package to easily create windows in Python using PyOpenGL, GLFW, OpenCV-Python, NumPy, pywin32 and ctypes"
 readme = "README.md"
 requires-python = ">=3.9"
-authors = [{"Glas42"}]
+authors = [ {"Glas42"} ]
 license = "GPL-3.0"
 dependencies = ["pyopengl", "glfw", "opencv-python", "numpy", "pywin32"]
