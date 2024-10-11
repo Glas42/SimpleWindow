@@ -160,6 +160,7 @@ def SetWindowSize(Name="", Size=(None, None)):
             Size = (WINDOWS[Name]["Size"][0], Size[1])
         if Size[1] is None:
             Size = (Size[0], WINDOWS[Name]["Size"][1])
+        Size = max(150, round(Size[0])), max(50, round(Size[1]))
         WINDOWS[Name]["Size"] = Size
         glfw.set_window_size(WINDOWS[Name]["Window"], Size[0], Size[1])
 
@@ -206,6 +207,7 @@ def SetWindowPosition(Name="", Position=(None, None)):
             Position = (WINDOWS[Name]["Position"][0], Position[1])
         if Position[1] is None:
             Position = (Position[0], WINDOWS[Name]["Position"][1])
+        Position = round(Position[0]), round(Position[1])
         WINDOWS[Name]["Position"] = Position
         glfw.set_window_pos(WINDOWS[Name]["Window"], Position[0], Position[1])
 
@@ -228,7 +230,7 @@ def SetTitleBarColor(Name="", TitleBarColor=(0, 0, 0)):
     if WINDOWS[Name]["TitleBarColor"] is not TitleBarColor and WINDOWS[Name]["Created"]:
         WINDOWS[Name]["TitleBarColor"] = TitleBarColor
         HWND = win32gui.FindWindow(None, Name)
-        windll.dwmapi.DwmSetWindowAttribute(HWND, 35, byref(c_int((TitleBarColor[0] << 16) | (TitleBarColor[1] << 8) | TitleBarColor[2])), sizeof(c_int))
+        windll.dwmapi.DwmSetWindowAttribute(HWND, 35, byref(c_int((max(0, min(255, round(TitleBarColor[0]))) << 16) | (max(0, min(255, round(TitleBarColor[1]))) << 8) | max(0, min(255, round(TitleBarColor[2]))))), sizeof(c_int))
 
 
 def SetResizable(Name="", Resizable=True):
@@ -247,7 +249,7 @@ def SetResizable(Name="", Resizable=True):
     None
     """
     if WINDOWS[Name]["Resizable"] is not Resizable:
-        WINDOWS[Name]["Resizable"] = Resizable
+        WINDOWS[Name]["Resizable"] = Resizable == True
         Close(Name)
         Initialize(Name=Name, Size=WINDOWS[Name]["Size"], Position=WINDOWS[Name]["Position"], TitleBarColor=WINDOWS[Name]["TitleBarColor"], Resizable=WINDOWS[Name]["Resizable"], TopMost=WINDOWS[Name]["TopMost"], Icon=WINDOWS[Name]["Icon"])
 
@@ -268,7 +270,7 @@ def SetTopMost(Name="", TopMost=True):
     None
     """
     if WINDOWS[Name]["TopMost"] is not TopMost:
-        WINDOWS[Name]["TopMost"] = TopMost
+        WINDOWS[Name]["TopMost"] = TopMost == True
         Close(Name)
         Initialize(Name=Name, Size=WINDOWS[Name]["Size"], Position=WINDOWS[Name]["Position"], TitleBarColor=WINDOWS[Name]["TitleBarColor"], Resizable=WINDOWS[Name]["Resizable"], TopMost=WINDOWS[Name]["TopMost"], Icon=WINDOWS[Name]["Icon"])
 
@@ -352,6 +354,7 @@ def Show(Name="", Frame=None):
 
     if Frame is not None:
         Frame = cv2.flip(Frame, 0)
+        Frame = cv2.resize(Frame, (gl.glGetTexLevelParameteriv(gl.GL_TEXTURE_2D, 0, gl.GL_TEXTURE_WIDTH), gl.glGetTexLevelParameteriv(gl.GL_TEXTURE_2D, 0, gl.GL_TEXTURE_HEIGHT)))
         gl.glBindTexture(gl.GL_TEXTURE_2D, WINDOWS[Name]["Texture"])
         gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGB, Frame.shape[1], Frame.shape[0], 0, gl.GL_RGB, gl.GL_UNSIGNED_BYTE, Frame)
 
