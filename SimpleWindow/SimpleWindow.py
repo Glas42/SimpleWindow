@@ -183,7 +183,7 @@ def GetWindowPosition(Name=""):
         RECT = win32gui.GetClientRect(HWND)
         TopLeft = win32gui.ClientToScreen(HWND, (RECT[0], RECT[1]))
         return TopLeft[0], TopLeft[1]
-    return 0, 0
+    return WINDOWS[Name]["Position"]
 
 
 def SetWindowPosition(Name="", Position=(None, None)):
