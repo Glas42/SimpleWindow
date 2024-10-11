@@ -74,6 +74,9 @@ def CreateWindow(Name=""):
     if Position[1] is None:
         Position = Position[0], 0
 
+    WINDOWS[Name]["Size"] = Size
+    WINDOWS[Name]["Position"] = Position
+
     Window = glfw.create_window(Size[0], Size[1], Name, None, None)
     glfw.make_context_current(Window)
 
@@ -345,15 +348,12 @@ def Show(Name="", Frame=None):
             WINDOWS[Name]["Created"] = None
             return
 
+    glfw.make_context_current(WINDOWS[Name]["Window"])
+
     if Frame is not None:
         Frame = cv2.flip(Frame, 0)
         gl.glBindTexture(gl.GL_TEXTURE_2D, WINDOWS[Name]["Texture"])
         gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGB, Frame.shape[1], Frame.shape[0], 0, gl.GL_RGB, gl.GL_UNSIGNED_BYTE, Frame)
-
-    gl.glViewport(0, 0, WINDOWS[Name]["Size"][0], WINDOWS[Name]["Size"][1])
-    gl.glClear(gl.GL_COLOR_BUFFER_BIT)
-
-    gl.glBindTexture(gl.GL_TEXTURE_2D, WINDOWS[Name]["Texture"])
 
     gl.glBegin(gl.GL_QUADS)
     gl.glTexCoord2f(0, 0)
