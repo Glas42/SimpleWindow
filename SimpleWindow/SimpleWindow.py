@@ -1,10 +1,38 @@
-from ctypes import windll, byref, sizeof, c_int
+from ctypes import Structure, c_int32, c_int16, c_int, windll, sizeof, byref
 import win32gui, win32con
-import OpenGL.GL as gl
+import ctypes
 import numpy
 import glfw
 import cv2
 import os
+
+class BITMAPINFO(Structure):
+    _fields_ = [
+        ("biSize", c_int32),
+        ("biWidth", c_int32),
+        ("biHeight", c_int32),
+        ("biPlanes", c_int16),
+        ("biBitCount", c_int16),
+        ("biCompression", c_int32),
+        ("biSizeImage", c_int32),
+        ("biXPelsPerMeter", c_int32),
+        ("biYPelsPerMeter", c_int32),
+        ("biClrUsed", c_int32),
+        ("biClrImportant", c_int32)
+    ]
+
+    def __init__(self, width, height, planes=1, bpp=24):
+        self.biSize = sizeof(self)
+        self.biWidth = width
+        self.biHeight = height
+        self.biPlanes = planes
+        self.biBitCount = bpp
+        self.biCompression = 0
+        self.biSizeImage = width * height * (bpp // 8)
+        self.biXPelsPerMeter = 0
+        self.biYPelsPerMeter = 0
+        self.biClrUsed = 0
+        self.biClrImportant = 0
 
 
 WINDOWS = {}
@@ -37,7 +65,7 @@ def Initialize(Name="", Size=(None, None), Position=(None, None), TitleBarColor=
     -------
     None
     """
-    WINDOWS[Name] = {"Size": Size, "Position": Position, "TitleBarColor": TitleBarColor, "Resizable": Resizable, "TopMost": TopMost, "Undestroyable": Undestroyable, "Icon": Icon, "Created": False, "Window": None, "Texture": None}
+    WINDOWS[Name] = {"Size": Size, "Position": Position, "TitleBarColor": TitleBarColor, "Resizable": Resizable, "TopMost": TopMost, "Undestroyable": Undestroyable, "Icon": Icon, "Created": False, "Window": None}
 
 
 def CreateWindow(Name=""):
@@ -100,21 +128,8 @@ def CreateWindow(Name=""):
         win32gui.SendMessage(HWND, win32con.WM_SETICON, win32con.ICON_SMALL, IconHandle)
         win32gui.SendMessage(HWND, win32con.WM_SETICON, win32con.ICON_BIG, IconHandle)
 
-    Texture = gl.glGenTextures(1)
-    gl.glBindTexture(gl.GL_TEXTURE_2D, Texture)
-
-    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_CLAMP_TO_EDGE)
-    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_CLAMP_TO_EDGE)
-    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
-    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
-
-    gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGB, WindowWidth, WindowHeight, 0, gl.GL_RGB, gl.GL_UNSIGNED_BYTE, Frame)
-
-    gl.glEnable(gl.GL_TEXTURE_2D)
-
     WINDOWS[Name]["Created"] = True
     WINDOWS[Name]["Window"] = Window
-    WINDOWS[Name]["Texture"] = Texture
 
 
 def GetWindowSize(Name=""):
@@ -133,6 +148,9 @@ def GetWindowSize(Name=""):
     """
     if WINDOWS[Name]["Created"]:
         HWND = win32gui.FindWindow(None, Name)
+        if HWND is None:
+            Close(Name)
+            return WINDOWS[Name]["Size"]
         RECT = win32gui.GetClientRect(HWND)
         TopLeft = win32gui.ClientToScreen(HWND, (RECT[0], RECT[1]))
         BottomRight = win32gui.ClientToScreen(HWND, (RECT[2], RECT[3]))
@@ -181,6 +199,9 @@ def GetWindowPosition(Name=""):
     """
     if WINDOWS[Name]["Created"]:
         HWND = win32gui.FindWindow(None, Name)
+        if HWND is None:
+            Close(Name)
+            return WINDOWS[Name]["Position"]
         RECT = win32gui.GetClientRect(HWND)
         TopLeft = win32gui.ClientToScreen(HWND, (RECT[0], RECT[1]))
         return TopLeft[0], TopLeft[1]
@@ -249,7 +270,7 @@ def SetResizable(Name="", Resizable=True):
     None
     """
     if WINDOWS[Name]["Resizable"] is not Resizable:
-        WINDOWS[Name]["Resizable"] = Resizable == True
+        WINDOWS[Name]["Resizable"] = Resizable is True
         Close(Name)
         Initialize(Name=Name, Size=WINDOWS[Name]["Size"], Position=WINDOWS[Name]["Position"], TitleBarColor=WINDOWS[Name]["TitleBarColor"], Resizable=WINDOWS[Name]["Resizable"], TopMost=WINDOWS[Name]["TopMost"], Icon=WINDOWS[Name]["Icon"])
 
@@ -270,7 +291,7 @@ def SetTopMost(Name="", TopMost=True):
     None
     """
     if WINDOWS[Name]["TopMost"] is not TopMost:
-        WINDOWS[Name]["TopMost"] = TopMost == True
+        WINDOWS[Name]["TopMost"] = TopMost is True
         Close(Name)
         Initialize(Name=Name, Size=WINDOWS[Name]["Size"], Position=WINDOWS[Name]["Position"], TitleBarColor=WINDOWS[Name]["TitleBarColor"], Resizable=WINDOWS[Name]["Resizable"], TopMost=WINDOWS[Name]["TopMost"], Icon=WINDOWS[Name]["Icon"])
 
@@ -319,7 +340,7 @@ def GetWindowStatus(Name=""):
         - "Iconic": Whether the window is minimized (bool).
     """
     HWND = win32gui.FindWindow(None, Name)
-    return {"Open": WINDOWS[Name]["Created"], "HWND": HWND, "Foreground": win32gui.GetForegroundWindow() == HWND, "Iconic": int(win32gui.IsIconic(HWND)) == 0}
+    return {"Open": WINDOWS[Name]["Created"], "HWND": HWND, "Foreground": win32gui.GetForegroundWindow() is HWND, "Iconic": int(win32gui.IsIconic(HWND)) == 0}
 
 
 def Show(Name="", Frame=None):
@@ -345,31 +366,33 @@ def Show(Name="", Frame=None):
         if WINDOWS[Name]["Created"]:
             Close(Name)
         if WINDOWS[Name]["Undestroyable"]:
-            Initialize(Name=Name, Size=WINDOWS[Name]["Size"], Position=WINDOWS[Name]["Position"], TitleBarColor=WINDOWS[Name]["TitleBarColor"], Resizable=WINDOWS[Name]["Resizable"], TopMost=WINDOWS[Name]["TopMost"], Icon=WINDOWS[Name]["Icon"])
+            Initialize(Name=Name, Size=WINDOWS[Name]["Size"], Position=WINDOWS[Name]["Position"], TitleBarColor=WINDOWS[Name]["TitleBarColor"], Resizable=WINDOWS[Name]["Resizable"], TopMost=WINDOWS[Name]["TopMost"], Undestroyable=WINDOWS[Name]["Undestroyable"], Icon=WINDOWS[Name]["Icon"])
         else:
             WINDOWS[Name]["Created"] = None
             return
 
-    glfw.make_context_current(WINDOWS[Name]["Window"])
-
     if Frame is not None:
-        Frame = cv2.flip(Frame, 0)
-        Frame = cv2.resize(Frame, (gl.glGetTexLevelParameteriv(gl.GL_TEXTURE_2D, 0, gl.GL_TEXTURE_WIDTH), gl.glGetTexLevelParameteriv(gl.GL_TEXTURE_2D, 0, gl.GL_TEXTURE_HEIGHT)))
-        gl.glBindTexture(gl.GL_TEXTURE_2D, WINDOWS[Name]["Texture"])
-        gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGB, Frame.shape[1], Frame.shape[0], 0, gl.GL_RGB, gl.GL_UNSIGNED_BYTE, Frame)
+        HWND = win32gui.FindWindow(None, Name)
+        if HWND == 0 or HWND is None:
+            return
+        if int(win32gui.IsIconic(HWND)) == 1:
+            return
 
-    gl.glBegin(gl.GL_QUADS)
-    gl.glTexCoord2f(0, 0)
-    gl.glVertex2f(-1, -1)
-    gl.glTexCoord2f(1, 0)
-    gl.glVertex2f(1, -1)
-    gl.glTexCoord2f(1, 1)
-    gl.glVertex2f(1, 1)
-    gl.glTexCoord2f(0, 1)
-    gl.glVertex2f(-1, 1)
-    gl.glEnd()
+        RECT = win32gui.GetClientRect(HWND)
+        TopLeft = win32gui.ClientToScreen(HWND, (RECT[0], RECT[1]))
+        BottomRight = win32gui.ClientToScreen(HWND, (RECT[2], RECT[3]))
+        SIZE = BottomRight[0] - TopLeft[0], BottomRight[1] - TopLeft[1]
 
-    glfw.swap_buffers(WINDOWS[Name]["Window"])
+        HDC = win32gui.GetDC(HWND)
+
+        Frame = numpy.flip(Frame, axis=0)
+        Frame = cv2.resize(Frame, GetWindowSize(Name))
+        Frame = numpy.ascontiguousarray(Frame)
+
+        windll.gdi32.StretchDIBits(HDC, 0, 0, SIZE[0], SIZE[1], 0, 0, SIZE[0], SIZE[1], ctypes.c_void_p(Frame.ctypes.data), ctypes.byref(BITMAPINFO(Frame.shape[1], Frame.shape[0])), win32con.DIB_RGB_COLORS, win32con.SRCCOPY)
+
+        win32gui.ReleaseDC(HWND, HDC)
+
     glfw.poll_events()
 
 
@@ -386,6 +409,5 @@ def Close(Name=""):
     -------
     None
     """
-    gl.glDeleteTextures([WINDOWS[Name]["Texture"]])
     glfw.terminate()
     WINDOWS[Name]["Created"] = False

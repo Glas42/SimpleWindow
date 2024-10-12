@@ -1,6 +1,6 @@
 # SimpleWindow
 
-A package to easily create windows in Python using PyOpenGL, GLFW, OpenCV-Python, NumPy, pywin32 and ctypes.
+A package to easily create windows in Python using GLFW, OpenCV-Python, NumPy, pywin32 and ctypes.
 
 ## Installation
 
