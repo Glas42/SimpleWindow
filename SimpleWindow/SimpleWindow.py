@@ -340,7 +340,7 @@ def GetWindowStatus(Name=""):
         - "Iconic": Whether the window is minimized (bool).
     """
     HWND = win32gui.FindWindow(None, Name)
-    return {"Open": WINDOWS[Name]["Created"], "HWND": HWND, "Foreground": win32gui.GetForegroundWindow() is HWND, "Iconic": int(win32gui.IsIconic(HWND)) == 0}
+    return {"Open": WINDOWS[Name]["Created"], "HWND": HWND, "Foreground": win32gui.GetForegroundWindow() == HWND, "Iconic": int(win32gui.IsIconic(HWND)) == 1}
 
 
 def Show(Name="", Frame=None):
@@ -376,6 +376,7 @@ def Show(Name="", Frame=None):
         if HWND == 0 or HWND is None:
             return
         if int(win32gui.IsIconic(HWND)) == 1:
+            glfw.poll_events()
             return
 
         RECT = win32gui.GetClientRect(HWND)
