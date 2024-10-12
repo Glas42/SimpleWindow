@@ -6,6 +6,8 @@ import glfw
 import cv2
 import os
 
+glfw.init()
+
 class BITMAPINFO(Structure):
     _fields_ = [
         ("biSize", c_int32),
@@ -89,8 +91,6 @@ def CreateWindow(Name=""):
     Resizable = WINDOWS[Name]["Resizable"]
     TopMost = WINDOWS[Name]["TopMost"]
     Icon = WINDOWS[Name]["Icon"]
-
-    glfw.init()
 
     if Size[0] is None:
         Size = 150, Size[1]
@@ -410,5 +410,5 @@ def Close(Name=""):
     -------
     None
     """
-    glfw.terminate()
+    glfw.destroy_window(WINDOWS[Name]["Window"])
     WINDOWS[Name]["Created"] = False
