@@ -1,6 +1,6 @@
 [project]
 name = "SimpleWindow"
-version = "0.14"
+version = "0.15"
 description = "A package to easily create windows in Python using GLFW, OpenCV-Python, NumPy, pywin32 and ctypes."
 readme = "README.md"
 requires-python = ">=3.9"
