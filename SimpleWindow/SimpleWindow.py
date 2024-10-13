@@ -69,6 +69,8 @@ def Initialize(Name="", Size=(None, None), Position=(None, None), TitleBarColor=
         If True, the window will be recreated if closed.
     Icon : str
         Path to the icon file for the window. Must be a .ico file.
+    NoWarnings : bool
+        If True, no warnings will be printed.
 
     Returns
     -------
@@ -202,6 +204,14 @@ def SetSize(Name="", Size=(None, None)):
     None
     """
     if WINDOWS[Name]["Size"] != Size and WINDOWS[Name]["Open"]:
+        if len(Size) != 2:
+            if WINDOWS[Name]["NoWarnings"] != True:
+                print(RED + "Size must be a tuple of (int, int)." + NORMAL)
+            return
+        if type(Size[0]) != int or type(Size[1]) != type(None) or type(Size[1]) != int or type(Size[0]) != type(None):
+            if WINDOWS[Name]["NoWarnings"] != True:
+                print(RED + "Size must be a tuple of (int, int)." + NORMAL)
+            return
         if Size[0] == None:
             Size = (WINDOWS[Name]["Size"][0], Size[1])
         if Size[1] == None:
@@ -256,6 +266,14 @@ def SetPosition(Name="", Position=(None, None)):
     None
     """
     if WINDOWS[Name]["Position"] != Position and WINDOWS[Name]["Open"]:
+        if len(Position) != 2:
+            if WINDOWS[Name]["NoWarnings"] != True:
+                print(RED + "Position must be a tuple of (int, int)." + NORMAL)
+            return
+        if type(Position[0]) != int or type(Position[0]) != type(None) or type(Position[1]) != int or type(Position[1]) != type(None):
+            if WINDOWS[Name]["NoWarnings"] != True:
+                print(RED + "Position must be a tuple of (int, int)." + NORMAL)
+            return
         if Position[0] == None:
             Position = (WINDOWS[Name]["Position"][0], Position[1])
         if Position[1] == None:
@@ -311,7 +329,7 @@ def SetTitleBarColor(Name="", Color=(0, 0, 0)):
         if len(Color) != 3:
             if WINDOWS[Name]["NoWarnings"] != True:
                 print(RED + "TitleBarColor must be a tuple of (int, int, int)." + NORMAL)
-                return
+            return
         WINDOWS[Name]["TitleBarColor"] = Color
         HWND = win32gui.FindWindow(None, Name)
         windll.dwmapi.DwmSetWindowAttribute(HWND, 35, byref(c_int((max(0, min(255, round(Color[0]))) << 16) | (max(0, min(255, round(Color[1]))) << 8) | max(0, min(255, round(Color[2]))))), sizeof(c_int))
@@ -557,6 +575,10 @@ def SetIcon(Name="", Icon=""):
     None
     """
     if WINDOWS[Name]["Icon"] != Icon and WINDOWS[Name]["Open"]:
+        if type(Icon) != str:
+            if WINDOWS[Name]["NoWarnings"] != True:
+                print(RED + "Icon must be an absolute path as a string." + NORMAL)
+            return
         WINDOWS[Name]["Icon"] = Icon
         HWND = win32gui.FindWindow(None, Name)
         Icon = Icon.replace("\\", "/")
