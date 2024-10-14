@@ -208,7 +208,7 @@ def SetSize(Name="", Size=(None, None)):
             if WINDOWS[Name]["NoWarnings"] != True:
                 print(RED + "Size must be a tuple of (int, int)." + NORMAL)
             return
-        if type(Size[0]) != int or type(Size[1]) != type(None) or type(Size[1]) != int or type(Size[0]) != type(None):
+        if (type(Size[0]) != int and type(Size[1]) != type(None)) or (type(Size[1]) != int and type(Size[0]) != type(None)):
             if WINDOWS[Name]["NoWarnings"] != True:
                 print(RED + "Size must be a tuple of (int, int)." + NORMAL)
             return
@@ -270,7 +270,7 @@ def SetPosition(Name="", Position=(None, None)):
             if WINDOWS[Name]["NoWarnings"] != True:
                 print(RED + "Position must be a tuple of (int, int)." + NORMAL)
             return
-        if type(Position[0]) != int or type(Position[0]) != type(None) or type(Position[1]) != int or type(Position[1]) != type(None):
+        if (type(Position[0]) != int and type(Position[0]) != type(None)) or (type(Position[1]) != int and type(Position[1]) != type(None)):
             if WINDOWS[Name]["NoWarnings"] != True:
                 print(RED + "Position must be a tuple of (int, int)." + NORMAL)
             return
