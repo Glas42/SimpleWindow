@@ -1,5 +1,6 @@
 from ctypes import Structure, c_int32, c_int16, c_int, windll, sizeof, byref
 import win32gui, win32con
+import traceback
 import ctypes
 import numpy
 import glfw
@@ -38,8 +39,20 @@ class BITMAPINFO(Structure):
         self.biClrImportant = 0
 
 WINDOWS = {}
-RED = "\033[31m"
+RED = "\033[91m"
 NORMAL = "\033[0m"
+
+
+def ShowError(Type, Message):
+    try:
+        while Message.startswith('\n'):
+            Message = Message[1:]
+        while Message.endswith('\n'):
+            Message = Message[:-1]
+        Message = f"{RED}>{NORMAL} " + Message.replace("\n", f"\n{RED}>{NORMAL} ")
+        print(f"{RED}{Type}{NORMAL}\n{Message}\n")
+    except:
+        print(f"Failed to parse the following error message:\n{Type}\n{Message}\n\nTraceback:\n{str(traceback.format_exc())}")
 
 
 # MARK: Initialize()
@@ -77,26 +90,30 @@ def Initialize(Name="", Size=(None, None), Position=(None, None), TitleBarColor=
     bool
         True if the window was successfully initialized, False otherwise.
     """
-    HWND = win32gui.FindWindow(None, Name)
-    if HWND != 0:
-        if NoWarnings != True:
-            print(RED + f"The window '{Name}' already exists, not creating a new window. ({Name}: {HWND})" + NORMAL)
+    try:
+        HWND = win32gui.FindWindow(None, Name)
+        if HWND != 0:
+            if NoWarnings != True:
+                print(RED + f"The window '{Name}' already exists, not creating a new window. ({Name}: {HWND})" + NORMAL)
+            return False
+
+        WINDOWS[Name] = {"Size": Size,
+                        "Position": Position,
+                        "TitleBarColor": TitleBarColor,
+                        "Resizable": Resizable,
+                        "TopMost": TopMost,
+                        "Foreground": Foreground,
+                        "Minimized": Minimized,
+                        "Undestroyable": Undestroyable,
+                        "Icon": Icon,
+                        "NoWarnings": NoWarnings,
+                        "Open": False,
+                        "Window": None}
+
+        return True
+    except:
+        ShowError("SimpleWindow - Error in function Initialize.", str(traceback.format_exc()))
         return False
-
-    WINDOWS[Name] = {"Size": Size,
-                     "Position": Position,
-                     "TitleBarColor": TitleBarColor,
-                     "Resizable": Resizable,
-                     "TopMost": TopMost,
-                     "Foreground": Foreground,
-                     "Minimized": Minimized,
-                     "Undestroyable": Undestroyable,
-                     "Icon": Icon,
-                     "NoWarnings": NoWarnings,
-                     "Open": False,
-                     "Window": None}
-
-    return True
 
 
 # MARK: CreateWindow()
@@ -114,55 +131,58 @@ def CreateWindow(Name=""):
     -------
     None
     """
-    Size = WINDOWS[Name]["Size"]
-    Position = WINDOWS[Name]["Position"]
-    TitleBarColor = WINDOWS[Name]["TitleBarColor"]
-    Resizable = WINDOWS[Name]["Resizable"]
-    TopMost = WINDOWS[Name]["TopMost"]
-    Foreground = WINDOWS[Name]["Foreground"]
-    Minimized = WINDOWS[Name]["Minimized"]
-    Icon = WINDOWS[Name]["Icon"]
+    try:
+        Size = WINDOWS[Name]["Size"]
+        Position = WINDOWS[Name]["Position"]
+        TitleBarColor = WINDOWS[Name]["TitleBarColor"]
+        Resizable = WINDOWS[Name]["Resizable"]
+        TopMost = WINDOWS[Name]["TopMost"]
+        Foreground = WINDOWS[Name]["Foreground"]
+        Minimized = WINDOWS[Name]["Minimized"]
+        Icon = WINDOWS[Name]["Icon"]
 
-    if Size[0] == None:
-        Size = 150, Size[1]
-    if Size[1] == None:
-        Size = Size[0], 50
+        if Size[0] == None:
+            Size = 150, Size[1]
+        if Size[1] == None:
+            Size = Size[0], 50
 
-    if Position[0] == None:
-        Position = 0, Position[1]
-    if Position[1] == None:
-        Position = Position[0], 0
+        if Position[0] == None:
+            Position = 0, Position[1]
+        if Position[1] == None:
+            Position = Position[0], 0
 
-    WINDOWS[Name]["Size"] = Size
-    WINDOWS[Name]["Position"] = Position
+        WINDOWS[Name]["Size"] = Size
+        WINDOWS[Name]["Position"] = Position
 
-    Window = glfw.create_window(Size[0], Size[1], Name, None, None)
-    glfw.make_context_current(Window)
+        Window = glfw.create_window(Size[0], Size[1], Name, None, None)
+        glfw.make_context_current(Window)
 
-    if Resizable == False:
-        glfw.set_window_attrib(Window, glfw.RESIZABLE, glfw.FALSE)
+        if Resizable == False:
+            glfw.set_window_attrib(Window, glfw.RESIZABLE, glfw.FALSE)
 
-    if TopMost:
-        glfw.set_window_attrib(Window, glfw.FLOATING, glfw.TRUE)
+        if TopMost:
+            glfw.set_window_attrib(Window, glfw.FLOATING, glfw.TRUE)
 
-    glfw.set_window_pos(Window, Position[0], Position[1])
+        glfw.set_window_pos(Window, Position[0], Position[1])
 
-    HWND = win32gui.FindWindow(None, Name)
-    windll.dwmapi.DwmSetWindowAttribute(HWND, 35, byref(c_int((TitleBarColor[0] << 16) | (TitleBarColor[1] << 8) | TitleBarColor[2])), sizeof(c_int))
-    Icon = Icon.replace("\\", "/")
-    if os.path.exists(Icon) and Icon.endswith(".ico"):
-        IconHandle = win32gui.LoadImage(None, Icon, win32con.IMAGE_ICON, 0, 0, win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTSIZE)
-        win32gui.SendMessage(HWND, win32con.WM_SETICON, win32con.ICON_SMALL, IconHandle)
-        win32gui.SendMessage(HWND, win32con.WM_SETICON, win32con.ICON_BIG, IconHandle)
+        HWND = win32gui.FindWindow(None, Name)
+        windll.dwmapi.DwmSetWindowAttribute(HWND, 35, byref(c_int((TitleBarColor[0] << 16) | (TitleBarColor[1] << 8) | TitleBarColor[2])), sizeof(c_int))
+        Icon = Icon.replace("\\", "/")
+        if os.path.exists(Icon) and Icon.endswith(".ico"):
+            IconHandle = win32gui.LoadImage(None, Icon, win32con.IMAGE_ICON, 0, 0, win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTSIZE)
+            win32gui.SendMessage(HWND, win32con.WM_SETICON, win32con.ICON_SMALL, IconHandle)
+            win32gui.SendMessage(HWND, win32con.WM_SETICON, win32con.ICON_BIG, IconHandle)
 
-    WINDOWS[Name]["Open"] = True
-    WINDOWS[Name]["Window"] = Window
+        WINDOWS[Name]["Open"] = True
+        WINDOWS[Name]["Window"] = Window
 
-    if Foreground:
-        SetForeground(Name=Name, State=True)
+        if Foreground:
+            SetForeground(Name=Name, State=True)
 
-    if Minimized:
-        SetMinimized(Name=Name, State=True)
+        if Minimized:
+            SetMinimized(Name=Name, State=True)
+    except:
+        ShowError("SimpleWindow - Error in function CreateWindow.", str(traceback.format_exc()))
 
 
 # MARK: Close()
@@ -180,10 +200,13 @@ def Close(Name=""):
     None
     """
     try:
-        glfw.destroy_window(WINDOWS[Name]["Window"])
+        try:
+            glfw.destroy_window(WINDOWS[Name]["Window"])
+        except:
+            pass
+        WINDOWS[Name]["Open"] = False
     except:
-        pass
-    WINDOWS[Name]["Open"] = False
+        ShowError("SimpleWindow - Error in function Close.", str(traceback.format_exc()))
 
 
 # MARK: SetSize()
@@ -203,22 +226,25 @@ def SetSize(Name="", Size=(None, None)):
     -------
     None
     """
-    if WINDOWS[Name]["Size"] != Size and WINDOWS[Name]["Open"]:
-        if len(Size) != 2:
-            if WINDOWS[Name]["NoWarnings"] != True:
-                print(RED + "Size must be a tuple of (int, int)." + NORMAL)
-            return
-        if (type(Size[0]) != int and type(Size[1]) != type(None)) or (type(Size[1]) != int and type(Size[0]) != type(None)):
-            if WINDOWS[Name]["NoWarnings"] != True:
-                print(RED + "Size must be a tuple of (int, int)." + NORMAL)
-            return
-        if Size[0] == None:
-            Size = (WINDOWS[Name]["Size"][0], Size[1])
-        if Size[1] == None:
-            Size = (Size[0], WINDOWS[Name]["Size"][1])
-        Size = max(150, round(Size[0])), max(50, round(Size[1]))
-        WINDOWS[Name]["Size"] = Size
-        glfw.set_window_size(WINDOWS[Name]["Window"], Size[0], Size[1])
+    try:
+        if WINDOWS[Name]["Size"] != Size and WINDOWS[Name]["Open"]:
+            if len(Size) != 2:
+                if WINDOWS[Name]["NoWarnings"] != True:
+                    print(RED + "Size must be a tuple of (int, int)." + NORMAL)
+                return
+            if (type(Size[0]) != int and type(Size[1]) != type(None)) or (type(Size[1]) != int and type(Size[0]) != type(None)):
+                if WINDOWS[Name]["NoWarnings"] != True:
+                    print(RED + "Size must be a tuple of (int, int)." + NORMAL)
+                return
+            if Size[0] == None:
+                Size = (WINDOWS[Name]["Size"][0], Size[1])
+            if Size[1] == None:
+                Size = (Size[0], WINDOWS[Name]["Size"][1])
+            Size = max(150, round(Size[0])), max(50, round(Size[1]))
+            WINDOWS[Name]["Size"] = Size
+            glfw.set_window_size(WINDOWS[Name]["Window"], Size[0], Size[1])
+    except:
+        ShowError("SimpleWindow - Error in function SetSize.", str(traceback.format_exc()))
 
 
 # MARK: GetSize()
@@ -236,16 +262,19 @@ def GetSize(Name=""):
     tuple of (int, int)
         The current width and height of the window.
     """
-    if WINDOWS[Name]["Open"]:
-        HWND = win32gui.FindWindow(None, Name)
-        if HWND == None:
-            Close(Name=Name)
-            return WINDOWS[Name]["Size"]
-        RECT = win32gui.GetClientRect(HWND)
-        TopLeft = win32gui.ClientToScreen(HWND, (RECT[0], RECT[1]))
-        BottomRight = win32gui.ClientToScreen(HWND, (RECT[2], RECT[3]))
-        return BottomRight[0] - TopLeft[0], BottomRight[1] - TopLeft[1]
-    return WINDOWS[Name]["Size"]
+    try:
+        if WINDOWS[Name]["Open"]:
+            HWND = win32gui.FindWindow(None, Name)
+            if HWND == None:
+                Close(Name=Name)
+                return WINDOWS[Name]["Size"]
+            RECT = win32gui.GetClientRect(HWND)
+            TopLeft = win32gui.ClientToScreen(HWND, (RECT[0], RECT[1]))
+            BottomRight = win32gui.ClientToScreen(HWND, (RECT[2], RECT[3]))
+            return BottomRight[0] - TopLeft[0], BottomRight[1] - TopLeft[1]
+        return WINDOWS[Name]["Size"]
+    except:
+        ShowError("SimpleWindow - Error in function GetSize.", str(traceback.format_exc()))
 
 
 # MARK: SetPosition()
@@ -265,22 +294,25 @@ def SetPosition(Name="", Position=(None, None)):
     -------
     None
     """
-    if WINDOWS[Name]["Position"] != Position and WINDOWS[Name]["Open"]:
-        if len(Position) != 2:
-            if WINDOWS[Name]["NoWarnings"] != True:
-                print(RED + "Position must be a tuple of (int, int)." + NORMAL)
-            return
-        if (type(Position[0]) != int and type(Position[0]) != type(None)) or (type(Position[1]) != int and type(Position[1]) != type(None)):
-            if WINDOWS[Name]["NoWarnings"] != True:
-                print(RED + "Position must be a tuple of (int, int)." + NORMAL)
-            return
-        if Position[0] == None:
-            Position = (WINDOWS[Name]["Position"][0], Position[1])
-        if Position[1] == None:
-            Position = (Position[0], WINDOWS[Name]["Position"][1])
-        Position = round(Position[0]), round(Position[1])
-        WINDOWS[Name]["Position"] = Position
-        glfw.set_window_pos(WINDOWS[Name]["Window"], Position[0], Position[1])
+    try:
+        if WINDOWS[Name]["Position"] != Position and WINDOWS[Name]["Open"]:
+            if len(Position) != 2:
+                if WINDOWS[Name]["NoWarnings"] != True:
+                    print(RED + "Position must be a tuple of (int, int)." + NORMAL)
+                return
+            if (type(Position[0]) != int and type(Position[0]) != type(None)) or (type(Position[1]) != int and type(Position[1]) != type(None)):
+                if WINDOWS[Name]["NoWarnings"] != True:
+                    print(RED + "Position must be a tuple of (int, int)." + NORMAL)
+                return
+            if Position[0] == None:
+                Position = (WINDOWS[Name]["Position"][0], Position[1])
+            if Position[1] == None:
+                Position = (Position[0], WINDOWS[Name]["Position"][1])
+            Position = round(Position[0]), round(Position[1])
+            WINDOWS[Name]["Position"] = Position
+            glfw.set_window_pos(WINDOWS[Name]["Window"], Position[0], Position[1])
+    except:
+        ShowError("SimpleWindow - Error in function SetPosition.", str(traceback.format_exc()))
 
 
 # MARK: GetPosition()
@@ -298,15 +330,20 @@ def GetPosition(Name=""):
     tuple of (int, int)
         The (x, y) coordinates of the window's top-left corner.
     """
-    if WINDOWS[Name]["Open"]:
-        HWND = win32gui.FindWindow(None, Name)
-        if HWND == None:
-            Close(Name=Name)
-            return WINDOWS[Name]["Position"]
-        RECT = win32gui.GetClientRect(HWND)
-        TopLeft = win32gui.ClientToScreen(HWND, (RECT[0], RECT[1]))
-        return TopLeft[0], TopLeft[1]
-    return WINDOWS[Name]["Position"]
+    try:
+        if WINDOWS[Name]["Open"]:
+            HWND = win32gui.FindWindow(None, Name)
+            if HWND == None:
+                Close(Name=Name)
+                return WINDOWS[Name]["Position"]
+            RECT = win32gui.GetClientRect(HWND)
+            TopLeft = win32gui.ClientToScreen(HWND, (RECT[0], RECT[1]))
+            return TopLeft[0], TopLeft[1]
+        return WINDOWS[Name]["Position"]
+    except:
+        ShowError("SimpleWindow - Error in function GetPosition.", str(traceback.format_exc()))
+        try: return WINDOWS[Name]["Position"]
+        except: return (0, 0)
 
 
 # MARK: SetTitleBarColor()
@@ -325,14 +362,17 @@ def SetTitleBarColor(Name="", Color=(0, 0, 0)):
     -------
     None
     """
-    if WINDOWS[Name]["TitleBarColor"] != Color and WINDOWS[Name]["Open"]:
-        if len(Color) != 3:
-            if WINDOWS[Name]["NoWarnings"] != True:
-                print(RED + "TitleBarColor must be a tuple of (int, int, int)." + NORMAL)
-            return
-        WINDOWS[Name]["TitleBarColor"] = Color
-        HWND = win32gui.FindWindow(None, Name)
-        windll.dwmapi.DwmSetWindowAttribute(HWND, 35, byref(c_int((max(0, min(255, round(Color[0]))) << 16) | (max(0, min(255, round(Color[1]))) << 8) | max(0, min(255, round(Color[2]))))), sizeof(c_int))
+    try:
+        if WINDOWS[Name]["TitleBarColor"] != Color and WINDOWS[Name]["Open"]:
+            if len(Color) != 3:
+                if WINDOWS[Name]["NoWarnings"] != True:
+                    print(RED + "TitleBarColor must be a tuple of (int, int, int)." + NORMAL)
+                return
+            WINDOWS[Name]["TitleBarColor"] = Color
+            HWND = win32gui.FindWindow(None, Name)
+            windll.dwmapi.DwmSetWindowAttribute(HWND, 35, byref(c_int((max(0, min(255, round(Color[0]))) << 16) | (max(0, min(255, round(Color[1]))) << 8) | max(0, min(255, round(Color[2]))))), sizeof(c_int))
+    except:
+        ShowError("SimpleWindow - Error in function SetTitleBarColor.", str(traceback.format_exc()))
 
 
 # MARK: GetTitleBarColor()
@@ -350,7 +390,11 @@ def GetTitleBarColor(Name=""):
     tuple of (int, int, int)
         The RGB color of the title bar.
     """
-    return WINDOWS[Name]["TitleBarColor"]
+    try:
+        return WINDOWS[Name]["TitleBarColor"]
+    except:
+        ShowError("SimpleWindow - Error in function GetTitleBarColor.", str(traceback.format_exc()))
+        return (0, 0, 0)
 
 
 # MARK: SetResizable()
@@ -369,9 +413,12 @@ def SetResizable(Name="", State=True):
     -------
     None
     """
-    if WINDOWS[Name]["Resizable"] != State:
-        WINDOWS[Name]["Resizable"] = State == True
-        glfw.set_window_attrib(WINDOWS[Name]["Window"], glfw.RESIZABLE, glfw.TRUE if WINDOWS[Name]["Resizable"] else glfw.FALSE)
+    try:
+        if WINDOWS[Name]["Resizable"] != State:
+            WINDOWS[Name]["Resizable"] = State == True
+            glfw.set_window_attrib(WINDOWS[Name]["Window"], glfw.RESIZABLE, glfw.TRUE if WINDOWS[Name]["Resizable"] else glfw.FALSE)
+    except:
+        ShowError("SimpleWindow - Error in function SetResizable.", str(traceback.format_exc()))
 
 
 # MARK: GetResizable()
@@ -389,7 +436,11 @@ def GetResizable(Name=""):
     bool
         True if the window is resizable, False otherwise.
     """
-    return WINDOWS[Name]["Resizable"]
+    try:
+        return WINDOWS[Name]["Resizable"]
+    except:
+        ShowError("SimpleWindow - Error in function GetResizable.", str(traceback.format_exc()))
+        return True
 
 
 # MARK: SetTopMost()
@@ -408,9 +459,12 @@ def SetTopMost(Name="", State=True):
     -------
     None
     """
-    if WINDOWS[Name]["TopMost"] != State:
-        WINDOWS[Name]["TopMost"] = State == True
-        glfw.set_window_attrib(WINDOWS[Name]["Window"], glfw.FLOATING, glfw.TRUE if WINDOWS[Name]["TopMost"] else glfw.FALSE)
+    try:
+        if WINDOWS[Name]["TopMost"] != State:
+            WINDOWS[Name]["TopMost"] = State == True
+            glfw.set_window_attrib(WINDOWS[Name]["Window"], glfw.FLOATING, glfw.TRUE if WINDOWS[Name]["TopMost"] else glfw.FALSE)
+    except:
+        ShowError("SimpleWindow - Error in function SetTopMost.", str(traceback.format_exc()))
 
 
 # MARK: GetTopMost()
@@ -428,7 +482,11 @@ def GetTopMost(Name=""):
     bool
         True if the window is always on top, False otherwise.
     """
-    return WINDOWS[Name]["TopMost"]
+    try:
+        return WINDOWS[Name]["TopMost"]
+    except:
+        ShowError("SimpleWindow - Error in function GetTopMost.", str(traceback.format_exc()))
+        return False
 
 
 # MARK: SetForeground()
@@ -448,13 +506,16 @@ def SetForeground(Name="", State=True):
     -------
     None
     """
-    if WINDOWS[Name]["Open"] == True:
-        WINDOWS[Name]["Foreground"] = State == True
-        HWND = win32gui.FindWindow(None, Name)
-        if State == True:
-            win32gui.SetWindowPos(HWND, win32con.HWND_TOPMOST if WINDOWS[Name]["TopMost"] == True else win32con.HWND_TOP, GetSize(Name=Name)[0], GetSize(Name=Name)[1], 0, 0, win32con.SWP_NOMOVE | win32con.SWP_NOSIZE)
-        elif State == False:
-            win32gui.SetWindowPos(HWND, win32con.HWND_BOTTOM, GetSize(Name=Name)[0], GetSize(Name=Name)[1], 0, 0, win32con.SWP_NOMOVE | win32con.SWP_NOSIZE)
+    try:
+        if WINDOWS[Name]["Open"] == True:
+            WINDOWS[Name]["Foreground"] = State == True
+            HWND = win32gui.FindWindow(None, Name)
+            if State == True:
+                win32gui.SetWindowPos(HWND, win32con.HWND_TOPMOST if WINDOWS[Name]["TopMost"] == True else win32con.HWND_TOP, GetSize(Name=Name)[0], GetSize(Name=Name)[1], 0, 0, win32con.SWP_NOMOVE | win32con.SWP_NOSIZE)
+            elif State == False:
+                win32gui.SetWindowPos(HWND, win32con.HWND_BOTTOM, GetSize(Name=Name)[0], GetSize(Name=Name)[1], 0, 0, win32con.SWP_NOMOVE | win32con.SWP_NOSIZE)
+    except:
+        ShowError("SimpleWindow - Error in function SetForeground.", str(traceback.format_exc()))
 
 
 # MARK: GetForeground()
@@ -472,10 +533,14 @@ def GetForeground(Name=""):
     bool
         True if the window is in the foreground, False otherwise.
     """
-    if WINDOWS[Name]["Open"] == True:
-        HWND = win32gui.FindWindow(None, Name)
-        return HWND == win32gui.GetForegroundWindow()
-    return False
+    try:
+        if WINDOWS[Name]["Open"] == True:
+            HWND = win32gui.FindWindow(None, Name)
+            return HWND == win32gui.GetForegroundWindow()
+        return False
+    except:
+        ShowError("SimpleWindow - Error in function GetForeground.", str(traceback.format_exc()))
+        return False
 
 
 # MARK: SetMinimized()
@@ -494,10 +559,13 @@ def SetMinimized(Name="", State=False):
     -------
     None
     """
-    if WINDOWS[Name]["Open"]:
-        WINDOWS[Name]["Minimized"] = State == True
-        HWND = win32gui.FindWindow(None, Name)
-        win32gui.ShowWindow(HWND, win32con.SW_MINIMIZE if State else win32con.SW_RESTORE)
+    try:
+        if WINDOWS[Name]["Open"]:
+            WINDOWS[Name]["Minimized"] = State == True
+            HWND = win32gui.FindWindow(None, Name)
+            win32gui.ShowWindow(HWND, win32con.SW_MINIMIZE if State else win32con.SW_RESTORE)
+    except:
+        ShowError("SimpleWindow - Error in function SetMinimized.", str(traceback.format_exc()))
 
 
 # MARK: GetMinimized()
@@ -515,9 +583,13 @@ def GetMinimized(Name=""):
     bool
         True if the window is minimized, False otherwise.
     """
-    if WINDOWS[Name]["Open"]:
-        HWND = win32gui.FindWindow(None, Name)
-        return int(win32gui.IsIconic(HWND)) == 1
+    try:
+        if WINDOWS[Name]["Open"]:
+            HWND = win32gui.FindWindow(None, Name)
+            return int(win32gui.IsIconic(HWND)) == 1
+    except:
+        ShowError("SimpleWindow - Error in function GetMinimized.", str(traceback.format_exc()))
+        return False
 
 
 # MARK: SetUndestroyable()
@@ -536,8 +608,11 @@ def SetUndestroyable(Name="", State=True):
     -------
     None
     """
-    if WINDOWS[Name]["Undestroyable"] != State:
-        WINDOWS[Name]["Undestroyable"] = State == True
+    try:
+        if WINDOWS[Name]["Undestroyable"] != State:
+            WINDOWS[Name]["Undestroyable"] = State == True
+    except:
+        ShowError("SimpleWindow - Error in function SetUndestroyable.", str(traceback.format_exc()))
 
 
 # MARK: GetUndestroyable()
@@ -555,7 +630,11 @@ def GetUndestroyable(Name=""):
     bool
         True if the window is undestroyable, False otherwise.
     """
-    return WINDOWS[Name]["Undestroyable"] == True
+    try:
+        return WINDOWS[Name]["Undestroyable"] == True
+    except:
+        ShowError("SimpleWindow - Error in function GetUndestroyable.", str(traceback.format_exc()))
+        return False
 
 
 # MARK: SetIcon()
@@ -574,18 +653,28 @@ def SetIcon(Name="", Icon=""):
     -------
     None
     """
-    if WINDOWS[Name]["Icon"] != Icon and WINDOWS[Name]["Open"]:
-        if type(Icon) != str:
-            if WINDOWS[Name]["NoWarnings"] != True:
-                print(RED + "Icon must be an absolute path as a string." + NORMAL)
-            return
-        WINDOWS[Name]["Icon"] = Icon
-        HWND = win32gui.FindWindow(None, Name)
-        Icon = Icon.replace("\\", "/")
-        if os.path.exists(Icon) and Icon.endswith(".ico"):
+    try:
+        if WINDOWS[Name]["Icon"] != Icon and WINDOWS[Name]["Open"]:
+            if type(Icon) != str:
+                if WINDOWS[Name]["NoWarnings"] != True:
+                    print(RED + "Icon must be an absolute path as a string." + NORMAL)
+                return
+            if os.path.exists(Icon) == False:
+                if WINDOWS[Name]["NoWarnings"] != True:
+                    print(RED + "Icon file does not exist." + NORMAL)
+                return
+            if Icon.endswith(".ico") == False:
+                if WINDOWS[Name]["NoWarnings"] != True:
+                    print(RED + "Icon must be a .ico file." + NORMAL)
+                return
+            WINDOWS[Name]["Icon"] = Icon
+            HWND = win32gui.FindWindow(None, Name)
+            Icon = Icon.replace("\\", "/")
             IconHandle = win32gui.LoadImage(None, Icon, win32con.IMAGE_ICON, 0, 0, win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTSIZE)
             win32gui.SendMessage(HWND, win32con.WM_SETICON, win32con.ICON_SMALL, IconHandle)
             win32gui.SendMessage(HWND, win32con.WM_SETICON, win32con.ICON_BIG, IconHandle)
+    except:
+        ShowError("SimpleWindow - Error in function SetIcon.", str(traceback.format_exc()))
 
 
 # MARK: GetIcon()
@@ -603,7 +692,11 @@ def GetIcon(Name=""):
     str
         The path to the icon file (must be a .ico file).
     """
-    return WINDOWS[Name]["Icon"]
+    try:
+        return WINDOWS[Name]["Icon"]
+    except:
+        ShowError("SimpleWindow - Error in function GetIcon.", str(traceback.format_exc()))
+        return ""
 
 
 # MARK: SetOpen()
@@ -622,10 +715,13 @@ def SetOpen(Name="", State=True):
     -------
     None
     """
-    if State == True and WINDOWS[Name]["Open"] != True:
-        CreateWindow(Name=Name)
-    elif State == False and WINDOWS[Name]["Open"] == True:
-        Close(Name=Name)
+    try:
+        if State == True and WINDOWS[Name]["Open"] != True:
+            CreateWindow(Name=Name)
+        elif State == False and WINDOWS[Name]["Open"] == True:
+            Close(Name=Name)
+    except:
+        ShowError("SimpleWindow - Error in function SetOpen.", str(traceback.format_exc()))
 
 
 # MARK: GetOpen()
@@ -643,7 +739,11 @@ def GetOpen(Name=""):
     bool
         True if the window is open, False if closed by code, None if closed by the user.
     """
-    return WINDOWS[Name]["Open"]
+    try:
+        return WINDOWS[Name]["Open"]
+    except:
+        ShowError("SimpleWindow - Error in function GetOpen.", str(traceback.format_exc()))
+        return True
 
 
 # MARK: GetHandle()
@@ -661,7 +761,11 @@ def GetHandle(Name=""):
     int
         The window's handle.
     """
-    return win32gui.FindWindow(None, Name)
+    try:
+        return win32gui.FindWindow(None, Name)
+    except:
+        ShowError("SimpleWindow - Error in function GetHandle.", str(traceback.format_exc()))
+        return 0
 
 
 # MARK: Show()
@@ -680,40 +784,43 @@ def Show(Name="", Frame=None):
     -------
     None
     """
-    if WINDOWS[Name]["Open"] == False:
-        CreateWindow(Name=Name)
-    elif WINDOWS[Name]["Open"] == None and WINDOWS[Name]["Undestroyable"] == False:
-        return
-    if glfw.window_should_close(WINDOWS[Name]["Window"]):
-        if WINDOWS[Name]["Open"] == True:
-            Close(Name=Name)
-        if WINDOWS[Name]["Undestroyable"] == True:
-            Initialize(Name=Name, Size=WINDOWS[Name]["Size"], Position=WINDOWS[Name]["Position"], TitleBarColor=WINDOWS[Name]["TitleBarColor"], Resizable=WINDOWS[Name]["Resizable"], TopMost=WINDOWS[Name]["TopMost"], Undestroyable=WINDOWS[Name]["Undestroyable"], Icon=WINDOWS[Name]["Icon"])
-        else:
-            WINDOWS[Name]["Open"] = None
+    try:
+        if WINDOWS[Name]["Open"] == False:
+            CreateWindow(Name=Name)
+        elif WINDOWS[Name]["Open"] == None and WINDOWS[Name]["Undestroyable"] == False:
             return
+        if glfw.window_should_close(WINDOWS[Name]["Window"]):
+            if WINDOWS[Name]["Open"] == True:
+                Close(Name=Name)
+            if WINDOWS[Name]["Undestroyable"] == True:
+                Initialize(Name=Name, Size=WINDOWS[Name]["Size"], Position=WINDOWS[Name]["Position"], TitleBarColor=WINDOWS[Name]["TitleBarColor"], Resizable=WINDOWS[Name]["Resizable"], TopMost=WINDOWS[Name]["TopMost"], Undestroyable=WINDOWS[Name]["Undestroyable"], Icon=WINDOWS[Name]["Icon"])
+            else:
+                WINDOWS[Name]["Open"] = None
+                return
 
-    if Frame is not None:
-        HWND = win32gui.FindWindow(None, Name)
-        if HWND == 0 or HWND == None:
-            return
-        if int(win32gui.IsIconic(HWND)) == 1:
-            glfw.poll_events()
-            return
+        if Frame is not None:
+            HWND = win32gui.FindWindow(None, Name)
+            if HWND == 0 or HWND == None:
+                return
+            if int(win32gui.IsIconic(HWND)) == 1:
+                glfw.poll_events()
+                return
 
-        RECT = win32gui.GetClientRect(HWND)
-        TopLeft = win32gui.ClientToScreen(HWND, (RECT[0], RECT[1]))
-        BottomRight = win32gui.ClientToScreen(HWND, (RECT[2], RECT[3]))
-        SIZE = BottomRight[0] - TopLeft[0], BottomRight[1] - TopLeft[1]
+            RECT = win32gui.GetClientRect(HWND)
+            TopLeft = win32gui.ClientToScreen(HWND, (RECT[0], RECT[1]))
+            BottomRight = win32gui.ClientToScreen(HWND, (RECT[2], RECT[3]))
+            SIZE = BottomRight[0] - TopLeft[0], BottomRight[1] - TopLeft[1]
 
-        HDC = win32gui.GetDC(HWND)
+            HDC = win32gui.GetDC(HWND)
 
-        Frame = numpy.flip(Frame, axis=0)
-        Frame = cv2.resize(Frame, GetSize(Name=Name))
-        Frame = numpy.ascontiguousarray(Frame)
+            Frame = numpy.flip(Frame, axis=0)
+            Frame = cv2.resize(Frame, GetSize(Name=Name))
+            Frame = numpy.ascontiguousarray(Frame)
 
-        windll.gdi32.StretchDIBits(HDC, 0, 0, SIZE[0], SIZE[1], 0, 0, SIZE[0], SIZE[1], ctypes.c_void_p(Frame.ctypes.data), ctypes.byref(BITMAPINFO(Frame.shape[1], Frame.shape[0])), win32con.DIB_RGB_COLORS, win32con.SRCCOPY)
+            windll.gdi32.StretchDIBits(HDC, 0, 0, SIZE[0], SIZE[1], 0, 0, SIZE[0], SIZE[1], ctypes.c_void_p(Frame.ctypes.data), ctypes.byref(BITMAPINFO(Frame.shape[1], Frame.shape[0])), win32con.DIB_RGB_COLORS, win32con.SRCCOPY)
 
-        win32gui.ReleaseDC(HWND, HDC)
+            win32gui.ReleaseDC(HWND, HDC)
 
-    glfw.poll_events()
+        glfw.poll_events()
+    except:
+        ShowError("SimpleWindow - Error in function Show.", str(traceback.format_exc()))
